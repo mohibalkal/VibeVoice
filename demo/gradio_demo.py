@@ -752,7 +752,7 @@ def create_demo_interface(demo_instance: VibeVoiceDemo):
                     cfg_scale = gr.Slider(
                         minimum=1.0,
                         maximum=12.0,
-                        value=1.3,
+                        value=2.0,
                         step=0.05,
                         label="CFG Scale (Guidance Strength)",
                         # info="Higher values increase adherence to text",
