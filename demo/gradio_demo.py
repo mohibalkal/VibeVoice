@@ -330,11 +330,11 @@ class VibeVoiceDemo:
                 # Check if line already has speaker format
                 if line.startswith('Speaker ') and ':' in line:
                     speaker_prefix, content = line.split(':', 1)
-                    formatted_script_lines.append(f"{speaker_prefix}: {prefix_tags}{content.strip()}")
+                    formatted_script_lines.append(f"{speaker_prefix}: {content.strip()}")
                 else:
                     # Auto-assign to speakers in rotation
                     speaker_id = len(formatted_script_lines) % num_speakers
-                    formatted_script_lines.append(f"Speaker {speaker_id}: {prefix_tags}{line}")
+                    formatted_script_lines.append(f"Speaker {speaker_id}: {line}")
             
             formatted_script = '\n'.join(formatted_script_lines)
             log += f"📝 Formatted script with {len(formatted_script_lines)} turns\n\n"
