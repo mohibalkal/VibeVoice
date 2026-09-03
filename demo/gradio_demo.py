@@ -33,6 +33,14 @@ logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
 
 
+try:
+    import mishkal.tashkeel
+    vocalizer = mishkal.tashkeel.TashkeelClass()
+    MISHKAL_AVAILABLE = True
+except ImportError:
+    MISHKAL_AVAILABLE = False
+    vocalizer = None
+
 class VibeVoiceDemo:
     def __init__(self, model_path: str, device: str = "cuda", inference_steps: int = 5, adapter_path: Optional[str] = None):
         """Initialize the VibeVoice demo with model loading."""
@@ -218,12 +226,21 @@ class VibeVoiceDemo:
                                  cfg_scale: float = 1.3,
                                  inference_steps: Optional[int] = None,
                                  seed: Optional[int] = None,
-                                 disable_voice_cloning: bool = False) -> Iterator[tuple]:
+                                 disable_voice_cloning: bool = False,
+                                 auto_tashkeel: bool = False) -> Iterator[tuple]:
         try:
             
             # Reset stop flag and set generating state
             self.stop_generation = False
             self.is_generating = True
+            
+            # Apply auto-tashkeel if enabled
+            if auto_tashkeel:
+                if MISHKAL_AVAILABLE and vocalizer is not None:
+                    script = vocalizer.tashkeel(script)
+                else:
+                    self.is_generating = False
+                    raise gr.Error("Error: Mishkal library is not installed. Please run `pip install mishkal`")
             
             # Validate inputs
             if not script.strip():
@@ -785,6 +802,12 @@ def create_demo_interface(demo_instance: VibeVoiceDemo):
                     elem_classes="speaker-item"
                 )
                 
+                auto_tashkeel = gr.Checkbox(
+                    label="✨ تشكيل تلقائي (Auto-Tashkeel)", 
+                    value=True,
+                    info="يقوم بتشكيل النص العربي أوتوماتيكياً لتحسين جودة النطق وتجنب الصوت الآلي."
+                )
+                
                 # Sampling parameters (contains all generation settings)
                 with gr.Accordion("Generation Parameters", open=False):
                     cfg_scale = gr.Slider(
@@ -932,7 +955,7 @@ Or paste text directly and it will auto-assign speakers.""",
         )
         
         # Main generation function with streaming
-        def generate_podcast_wrapper(num_speakers, script, emotion, speed, speaker_1, speaker_2, speaker_3, speaker_4, cfg_scale, inference_steps, seed, disable_voice_cloning):
+        def generate_podcast_wrapper(num_speakers, script, emotion, speed, speaker_1, speaker_2, speaker_3, speaker_4, cfg_scale, inference_steps, seed, disable_voice_cloning, auto_tashkeel):
             """Wrapper function to handle the streaming generation call."""
             try:
                 speakers = [speaker_1, speaker_2, speaker_3, speaker_4]
@@ -955,7 +978,8 @@ Or paste text directly and it will auto-assign speakers.""",
                     cfg_scale=cfg_scale,
                     inference_steps=inference_steps,
                     seed=seed,
-                    disable_voice_cloning=disable_voice_cloning
+                    disable_voice_cloning=disable_voice_cloning,
+                    auto_tashkeel=auto_tashkeel
                 ):
                     final_log = log
                     
@@ -1003,7 +1027,7 @@ Or paste text directly and it will auto-assign speakers.""",
             queue=False
         ).then(
             fn=generate_podcast_wrapper,
-            inputs=[num_speakers, script_input, emotion_dropdown, speed_dropdown] + speaker_selections + [cfg_scale, inference_steps, seed, disable_voice_cloning],
+            inputs=[num_speakers, script_input, emotion_dropdown, speed_dropdown] + speaker_selections + [cfg_scale, inference_steps, seed, disable_voice_cloning, auto_tashkeel],
             outputs=[audio_output, complete_audio_output, log_output, streaming_status, generate_btn, stop_btn],
             queue=True  # Enable Gradio's built-in queue
         )
