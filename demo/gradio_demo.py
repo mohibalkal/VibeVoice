@@ -209,6 +209,8 @@ class VibeVoiceDemo:
     def generate_podcast_streaming(self, 
                                  num_speakers: int,
                                  script: str,
+                                 emotion: str = "",
+                                 speed: str = "",
                                  speaker_1: str = None,
                                  speaker_2: str = None,
                                  speaker_3: str = None,
@@ -312,6 +314,14 @@ class VibeVoiceDemo:
             lines = script.strip().split('\n')
             formatted_script_lines = []
             
+            # Prepare prefix tags for Emotion and Speed
+            prefix_tags = ""
+            if emotion or speed:
+                tags = []
+                if emotion: tags.append(emotion)
+                if speed: tags.append(speed)
+                prefix_tags = " ".join(tags) + " "
+            
             for line in lines:
                 line = line.strip()
                 if not line:
@@ -319,11 +329,12 @@ class VibeVoiceDemo:
                     
                 # Check if line already has speaker format
                 if line.startswith('Speaker ') and ':' in line:
-                    formatted_script_lines.append(line)
+                    speaker_prefix, content = line.split(':', 1)
+                    formatted_script_lines.append(f"{speaker_prefix}: {prefix_tags}{content.strip()}")
                 else:
                     # Auto-assign to speakers in rotation
                     speaker_id = len(formatted_script_lines) % num_speakers
-                    formatted_script_lines.append(f"Speaker {speaker_id}: {line}")
+                    formatted_script_lines.append(f"Speaker {speaker_id}: {prefix_tags}{line}")
             
             formatted_script = '\n'.join(formatted_script_lines)
             log += f"📝 Formatted script with {len(formatted_script_lines)} turns\n\n"
@@ -747,6 +758,33 @@ def create_demo_interface(demo_instance: VibeVoiceDemo):
                 # Advanced settings
                 gr.Markdown("### ⚙️ **Advanced Settings**")
                 
+                # Emotion & Speed Settings
+                emotion_dropdown = gr.Dropdown(
+                    choices=[
+                        ("افتراضي (بدون)", ""),
+                        ("ابتسامة صوتية (Vocal Smile)", "(Smiling and cheerful)"),
+                        ("مذيع أخبار (Newscaster)", "(Professional newscaster tone)"),
+                        ("همس (Whisper)", "(Whispering softly)"),
+                        ("متعاطف (Empathetic)", "(Empathetic and warm)"),
+                        ("حماسي/إعلاني (Promo/Hype)", "(Excited and energetic)"),
+                        ("جامد/محايد (Deadpan)", "(Monotone and emotionless)")
+                    ],
+                    value="",
+                    label="طريقة الصوت (Emotion)",
+                    elem_classes="speaker-item"
+                )
+                speed_dropdown = gr.Dropdown(
+                    choices=[
+                        ("طبيعي (Natural)", ""),
+                        ("سريع جدا (Rapid Fire)", "(Speaking very rapidly)"),
+                        ("بطيء وهادئ (The Drift)", "(Speaking slowly and deliberately)"),
+                        ("متقطع (Staccato)", "(Speaking with short, punchy, staccato words)")
+                    ],
+                    value="",
+                    label="السرعة (Speed)",
+                    elem_classes="speaker-item"
+                )
+                
                 # Sampling parameters (contains all generation settings)
                 with gr.Accordion("Generation Parameters", open=False):
                     cfg_scale = gr.Slider(
@@ -894,7 +932,7 @@ Or paste text directly and it will auto-assign speakers.""",
         )
         
         # Main generation function with streaming
-        def generate_podcast_wrapper(num_speakers, script, speaker_1, speaker_2, speaker_3, speaker_4, cfg_scale, inference_steps, seed, disable_voice_cloning):
+        def generate_podcast_wrapper(num_speakers, script, emotion, speed, speaker_1, speaker_2, speaker_3, speaker_4, cfg_scale, inference_steps, seed, disable_voice_cloning):
             """Wrapper function to handle the streaming generation call."""
             try:
                 speakers = [speaker_1, speaker_2, speaker_3, speaker_4]
@@ -908,6 +946,8 @@ Or paste text directly and it will auto-assign speakers.""",
                 for streaming_audio, complete_audio, log, streaming_visible in demo_instance.generate_podcast_streaming(
                     num_speakers=int(num_speakers),
                     script=script,
+                    emotion=emotion,
+                    speed=speed,
                     speaker_1=speakers[0],
                     speaker_2=speakers[1],
                     speaker_3=speakers[2],
@@ -963,7 +1003,7 @@ Or paste text directly and it will auto-assign speakers.""",
             queue=False
         ).then(
             fn=generate_podcast_wrapper,
-            inputs=[num_speakers, script_input] + speaker_selections + [cfg_scale, inference_steps, seed, disable_voice_cloning],
+            inputs=[num_speakers, script_input, emotion_dropdown, speed_dropdown] + speaker_selections + [cfg_scale, inference_steps, seed, disable_voice_cloning],
             outputs=[audio_output, complete_audio_output, log_output, streaming_status, generate_btn, stop_btn],
             queue=True  # Enable Gradio's built-in queue
         )
