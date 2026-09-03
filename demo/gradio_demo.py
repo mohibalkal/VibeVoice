@@ -230,12 +230,16 @@ class VibeVoiceDemo:
             # Apply auto-tashkeel if enabled
             if auto_tashkeel:
                 try:
-                    import mishkal.tashkeel
-                    vocalizer = mishkal.tashkeel.TashkeelClass()
-                    script = vocalizer.tashkeel(script)
+                    import mishkal.tashkeel  # type: ignore
                 except ImportError:
-                    self.is_generating = False
-                    raise gr.Error("Error: Mishkal library is not installed. Please run `!pip install mishkal` in a new Kaggle cell, then try generating again.")
+                    print("Mishkal not found. Installing it automatically...")
+                    import subprocess
+                    import sys
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "mishkal"])
+                    import mishkal.tashkeel  # type: ignore
+                
+                vocalizer = mishkal.tashkeel.TashkeelClass()
+                script = vocalizer.tashkeel(script)
             
             # Validate inputs
             if not script.strip():
