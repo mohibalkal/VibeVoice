@@ -33,13 +33,6 @@ logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
 
 
-try:
-    import mishkal.tashkeel
-    vocalizer = mishkal.tashkeel.TashkeelClass()
-    MISHKAL_AVAILABLE = True
-except ImportError:
-    MISHKAL_AVAILABLE = False
-    vocalizer = None
 
 class VibeVoiceDemo:
     def __init__(self, model_path: str, device: str = "cuda", inference_steps: int = 5, adapter_path: Optional[str] = None):
@@ -236,11 +229,13 @@ class VibeVoiceDemo:
             
             # Apply auto-tashkeel if enabled
             if auto_tashkeel:
-                if MISHKAL_AVAILABLE and vocalizer is not None:
+                try:
+                    import mishkal.tashkeel
+                    vocalizer = mishkal.tashkeel.TashkeelClass()
                     script = vocalizer.tashkeel(script)
-                else:
+                except ImportError:
                     self.is_generating = False
-                    raise gr.Error("Error: Mishkal library is not installed. Please run `pip install mishkal`")
+                    raise gr.Error("Error: Mishkal library is not installed. Please run `!pip install mishkal` in a new Kaggle cell, then try generating again.")
             
             # Validate inputs
             if not script.strip():
